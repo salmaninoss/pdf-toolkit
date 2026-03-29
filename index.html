@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Toolkit — Free Online PDF Tools</title>
+<meta name="description" content="Free online PDF tools — merge, split, rotate, reorder, and add page numbers to your PDFs. 100% browser-based, your files never leave your device.">
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<style>
+  :root {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-hover: #334155;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --border: #334155;
+    --success: #22c55e;
+    --danger: #ef4444;
+    --radius: 12px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .header {
+    text-align: center;
+    padding: 3rem 1rem 1rem;
+  }
+
+  .header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+  }
+
+  .header p {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-top: 0.75rem;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+  }
+
+  .tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .tool-btn {
+    background: var(--surface);
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    padding: 1.25rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    color: var(--text);
+  }
+
+  .tool-btn:hover { background: var(--surface-hover); transform: translateY(-2px); }
+  .tool-btn.active { border-color: var(--primary); background: rgba(99,102,241,0.1); }
+
+  .tool-btn .icon { font-size: 2rem; margin-bottom: 0.5rem; }
+  .tool-btn .label { font-size: 0.85rem; font-weight: 600; }
+
+  .workspace {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 2rem;
+    min-height: 300px;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 3rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--primary);
+    background: rgba(99,102,241,0.05);
+  }
+
+  .drop-zone .icon { font-size: 3rem; margin-bottom: 1rem; }
+  .drop-zone p { color: var(--text-muted); }
+  .drop-zone .hint { font-size: 0.85rem; margin-top: 0.5rem; }
+
+  .file-list {
+    margin-top: 1.5rem;
+  }
+
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+  }
+
+  .file-item .icon { font-size: 1.5rem; }
+  .file-item .name { flex: 1; font-weight: 500; }
+  .file-item .size { color: var(--text-muted); font-size: 0.85rem; }
+  .file-item .remove {
+    background: none;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.25rem;
+  }
+
+  .file-item .page-info {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+
+  .btn-secondary:hover { background: #475569; }
+
+  .tool-options {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .tool-options label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+  }
+
+  .tool-options input, .tool-options select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+  }
+
+  .tool-options input:focus, .tool-options select:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+
+  .page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .page-thumb {
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 0.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+
+  .page-thumb:hover { border-color: var(--primary); }
+  .page-thumb.selected { border-color: var(--success); background: rgba(34,197,94,0.1); }
+  .page-thumb .page-num { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+  .page-thumb canvas { width: 100%; border-radius: 4px; }
+
+  .progress {
+    width: 100%;
+    height: 4px;
+    background: var(--bg);
+    border-radius: 2px;
+    margin: 1rem 0;
+    overflow: hidden;
+    display: none;
+  }
+
+  .progress.active { display: block; }
+
+  .progress-bar {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 2px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+
+  .status {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    display: none;
+  }
+
+  .status.success { display: block; background: rgba(34,197,94,0.1); color: var(--success); }
+  .status.error { display: block; background: rgba(239,68,68,0.1); color: var(--danger); }
+
+  .placeholder {
+    color: var(--text-muted);
+    text-align: center;
+    padding: 2rem;
+    font-size: 1rem;
+  }
+
+  .placeholder .icon { font-size: 3rem; margin-bottom: 1rem; }
+
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .footer a { color: var(--primary); text-decoration: none; }
+
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.75rem; }
+    .tools-grid { grid-template-columns: repeat(3, 1fr); }
+    .workspace { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔧 PDF Toolkit</h1>
+  <p>Fast, private, 100% browser-based PDF tools</p>
+  <span class="badge">🔒 Your files never leave your device</span>
+</div>
+
+<div class="container">
+  <div class="tools-grid">
+    <button class="tool-btn active" data-tool="merge" onclick="selectTool('merge')">
+      <div class="icon">📎</div>
+      <div class="label">Merge</div>
+    </button>
+    <button class="tool-btn" data-tool="split" onclick="selectTool('split')">
+      <div class="icon">✂️</div>
+      <div class="label">Split</div>
+    </button>
+    <button class="tool-btn" data-tool="rotate" onclick="selectTool('rotate')">
+      <div class="icon">🔄</div>
+      <div class="label">Rotate</div>
+    </button>
+    <button class="tool-btn" data-tool="reorder" onclick="selectTool('reorder')">
+      <div class="icon">🔀</div>
+      <div class="label">Reorder</div>
+    </button>
+    <button class="tool-btn" data-tool="pagenum" onclick="selectTool('pagenum')">
+      <div class="icon">🔢</div>
+      <div class="label">Page #s</div>
+    </button>
+    <button class="tool-btn" data-tool="extract" onclick="selectTool('extract')">
+      <div class="icon">📄</div>
+      <div class="label">Extract</div>
+    </button>
+  </div>
+
+  <div class="workspace">
+    <div id="tool-description" class="placeholder">
+      <div class="icon">📎</div>
+      <p>Merge multiple PDFs into one file</p>
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">📂</div>
+      <p><strong>Drop PDF files here</strong></p>
+      <p class="hint">or click to browse</p>
+      <input type="file" id="fileInput" accept=".pdf" multiple style="display:none">
+    </div>
+
+    <div class="tool-options" id="toolOptions"></div>
+
+    <div class="progress" id="progress">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="file-list" id="fileList"></div>
+    <div id="pagePreview" class="page-grid"></div>
+
+    <div class="actions" id="actions" style="display:none">
+      <button class="btn btn-primary" id="processBtn" onclick="processFiles()">
+        Process & Download
+      </button>
+      <button class="btn btn-secondary" onclick="clearAll()">
+        Clear All
+      </button>
+    </div>
+
+    <div class="status" id="status"></div>
+  </div>
+</div>
+
+<div class="footer">
+  Built by <a href="#">Sermi</a> 🔧 — Your files are processed entirely in your browser.
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+let currentTool = 'merge';
+let files = [];
+let pdfDocs = {};
+let pageSelections = new Set();
+
+const toolDescriptions = {
+  merge: { icon: '📎', desc: 'Merge multiple PDFs into one file' },
+  split: { icon: '✂️', desc: 'Extract specific pages from a PDF' },
+  rotate: { icon: '🔄', desc: 'Rotate pages in a PDF' },
+  reorder: { icon: '🔀', desc: 'Reorder pages by dragging' },
+  pagenum: { icon: '🔢', desc: 'Add page numbers to a PDF' },
+  extract: { icon: '📄', desc: 'Extract selected pages as a new PDF' },
+};
+
+function selectTool(tool) {
+  currentTool = tool;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-tool="${tool}"]`).classList.add('active');
+  
+  const info = toolDescriptions[tool];
+  document.getElementById('tool-description').innerHTML = `
+    <div class="icon">${info.icon}</div>
+    <p>${info.desc}</p>
+  `;
+  
+  clearAll();
+  renderOptions();
+}
+
+function renderOptions() {
+  const opts = document.getElementById('toolOptions');
+  
+  if (currentTool === 'rotate') {
+    opts.innerHTML = `
+      <label>Angle:</label>
+      <select id="rotateAngle">
+        <option value="90">90° Clockwise</option>
+        <option value="180">180°</option>
+        <option value="270">270° (90° CCW)</option>
+      </select>
+    `;
+  } else if (currentTool === 'pagenum') {
+    opts.innerHTML = `
+      <label>Position:</label>
+      <select id="pageNumPos">
+        <option value="bottom-right">Bottom Right</option>
+        <option value="bottom-center">Bottom Center</option>
+        <option value="bottom-left">Bottom Left</option>
+        <option value="top-right">Top Right</option>
+      </select>
+      <label>Start:</label>
+      <input type="number" id="pageNumStart" value="1" min="1" style="width:60px">
+    `;
+  } else if (currentTool === 'split') {
+    opts.innerHTML = `
+      <label>Pages (e.g., 1-5 or 1,3,5):</label>
+      <input type="text" id="splitRange" placeholder="1-3, 5, 7-10" style="width:200px">
+    `;
+  } else {
+    opts.innerHTML = '';
+  }
+}
+
+// Drop zone
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+});
+fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+async function handleFiles(fileList) {
+  for (const file of fileList) {
+    if (file.type !== 'application/pdf') continue;
+    files.push(file);
+    
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const doc = await PDFLib.PDFDocument.load(arrayBuffer);
+      pdfDocs[file.name] = doc;
+    } catch (err) {
+      console.error('Failed to load PDF:', err);
+    }
+  }
+  
+  renderFileList();
+  document.getElementById('actions').style.display = files.length ? 'flex' : 'none';
+  
+  if (['split', 'extract'].includes(currentTool) && files.length === 1) {
+    renderPageThumbnails(files[0]);
+  }
+}
+
+function renderFileList() {
+  const list = document.getElementById('fileList');
+  list.innerHTML = files.map((f, i) => {
+    const doc = pdfDocs[f.name];
+    const pages = doc ? doc.getPageCount() : '?';
+    const size = (f.size / 1024).toFixed(0);
+    return `
+      <div class="file-item">
+        <span class="icon">📄</span>
+        <span class="name">${f.name}</span>
+        <span class="page-info">${pages} page${pages !== 1 ? 's' : ''}</span>
+        <span class="size">${size} KB</span>
+        <button class="remove" onclick="removeFile(${i})">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+function removeFile(index) {
+  const name = files[index].name;
+  files.splice(index, 1);
+  delete pdfDocs[name];
+  renderFileList();
+  document.getElementById('actions').style.display = files.length ? 'flex' : 'none';
+  document.getElementById('pagePreview').innerHTML = '';
+}
+
+function clearAll() {
+  files = [];
+  pdfDocs = {};
+  pageSelections.clear();
+  document.getElementById('fileList').innerHTML = '';
+  document.getElementById('pagePreview').innerHTML = '';
+  document.getElementById('actions').style.display = 'none';
+  document.getElementById('status').className = 'status';
+  document.getElementById('status').style.display = 'none';
+  fileInput.value = '';
+}
+
+function showStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = `status ${type}`;
+  el.style.display = 'block';
+}
+
+function showProgress(pct) {
+  const p = document.getElementById('progress');
+  const bar = document.getElementById('progressBar');
+  p.classList.add('active');
+  bar.style.width = pct + '%';
+  if (pct >= 100) setTimeout(() => p.classList.remove('active'), 500);
+}
+
+async function renderPageThumbnails(file) {
+  const container = document.getElementById('pagePreview');
+  container.innerHTML = '';
+  pageSelections.clear();
+  
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 0.3 });
+    
+    const div = document.createElement('div');
+    div.className = 'page-thumb';
+    div.dataset.page = i;
+    div.onclick = () => togglePageSelection(i, div);
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    
+    div.appendChild(canvas);
+    div.innerHTML += `<div class="page-num">Page ${i}</div>`;
+    container.appendChild(div);
+  }
+}
+
+function togglePageSelection(num, el) {
+  if (pageSelections.has(num)) {
+    pageSelections.delete(num);
+    el.classList.remove('selected');
+  } else {
+    pageSelections.add(num);
+    el.classList.add('selected');
+  }
+}
+
+function parsePageRange(rangeStr, maxPage) {
+  const pages = new Set();
+  for (const part of rangeStr.split(',')) {
+    const trimmed = part.trim();
+    if (trimmed.includes('-')) {
+      const [start, end] = trimmed.split('-').map(Number);
+      for (let i = start; i <= end && i <= maxPage; i++) {
+        if (i >= 1) pages.add(i);
+      }
+    } else {
+      const n = Number(trimmed);
+      if (n >= 1 && n <= maxPage) pages.add(n);
+    }
+  }
+  return [...pages].sort((a, b) => a - b);
+}
+
+function downloadPdf(pdfBytes, filename) {
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function processFiles() {
+  const btn = document.getElementById('processBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+  
+  try {
+    switch (currentTool) {
+      case 'merge': await doMerge(); break;
+      case 'split': await doSplit(); break;
+      case 'rotate': await doRotate(); break;
+      case 'reorder': await doReorder(); break;
+      case 'pagenum': await doPageNumbers(); break;
+      case 'extract': await doExtract(); break;
+    }
+  } catch (err) {
+    showStatus(`Error: ${err.message}`, 'error');
+  }
+  
+  btn.disabled = false;
+  btn.textContent = 'Process & Download';
+}
+
+async function doMerge() {
+  if (files.length < 2) throw new Error('Select at least 2 PDFs to merge');
+  
+  showProgress(10);
+  const merged = await PDFLib.PDFDocument.create();
+  
+  for (let i = 0; i < files.length; i++) {
+    const doc = pdfDocs[files[i].name];
+    const pages = await merged.copyPages(doc, doc.getPageIndices());
+    pages.forEach(p => merged.addPage(p));
+    showProgress(10 + (80 * (i + 1) / files.length));
+  }
+  
+  showProgress(95);
+  const pdfBytes = await merged.save();
+  downloadPdf(pdfBytes, 'merged.pdf');
+  showProgress(100);
+  showStatus(`✅ Merged ${files.length} PDFs successfully!`, 'success');
+}
+
+async function doSplit() {
+  if (files.length !== 1) throw new Error('Select exactly 1 PDF to split');
+  
+  const rangeStr = document.getElementById('splitRange').value;
+  if (!rangeStr) throw new Error('Enter a page range');
+  
+  const doc = pdfDocs[files[0].name];
+  const pages = parsePageRange(rangeStr, doc.getPageCount());
+  
+  if (pages.length === 0) throw new Error('No valid pages in range');
+  
+  showProgress(10);
+  const newDoc = await PDFLib.PDFDocument.create();
+  const copiedPages = await newDoc.copyPages(doc, pages.map(p => p - 1));
+  copiedPages.forEach(p => newDoc.addPage(p));
+  
+  showProgress(80);
+  const pdfBytes = await newDoc.save();
+  downloadPdf(pdfBytes, `split_${rangeStr.replace(/[^0-9,-]/g, '')}.pdf`);
+  showProgress(100);
+  showStatus(`✅ Extracted ${pages.length} page(s)`, 'success');
+}
+
+async function doRotate() {
+  if (files.length !== 1) throw new Error('Select exactly 1 PDF to rotate');
+  
+  const angle = parseInt(document.getElementById('rotateAngle').value);
+  const doc = pdfDocs[files[0].name];
+  const pages = doc.getPages();
+  
+  showProgress(10);
+  for (let i = 0; i < pages.length; i++) {
+    pages[i].setRotation(PDFLib.degrees(pages[i].getRotation().angle + angle));
+    showProgress(10 + (80 * (i + 1) / pages.length));
+  }
+  
+  showProgress(95);
+  const pdfBytes = await doc.save();
+  downloadPdf(pdfBytes, `rotated_${angle}.pdf`);
+  showProgress(100);
+  showStatus(`✅ Rotated all pages by ${angle}°`, 'success');
+}
+
+async function doReorder() {
+  if (files.length !== 1) throw new Error('Select exactly 1 PDF');
+  showStatus('Click pages in the desired order, then click Process again.', 'error');
+  
+  if (pageSelections.size < 2) {
+    await renderPageThumbnails(files[0]);
+    // Auto-select all pages in order for reorder mode
+    const doc = pdfDocs[files[0].name];
+    for (let i = 1; i <= doc.getPageCount(); i++) {
+      pageSelections.add(i);
+      const thumb = document.querySelector(`[data-page="${i}"]`);
+      if (thumb) thumb.classList.add('selected');
+    }
+    showStatus('Pages selected. Enter new order as comma-separated page numbers (e.g., 3,1,2)', 'error');
+    
+    const opts = document.getElementById('toolOptions');
+    if (!document.getElementById('reorderInput')) {
+      opts.innerHTML = `<label>New order:</label><input type="text" id="reorderInput" placeholder="3,1,2,4,5" style="width:200px">`;
+    }
+    return;
+  }
+  
+  const orderStr = document.getElementById('reorderInput')?.value;
+  if (!orderStr) throw new Error('Enter the new page order');
+  
+  const doc = pdfDocs[files[0].name];
+  const newOrder = orderStr.split(',').map(n => parseInt(n.trim()) - 1);
+  
+  showProgress(10);
+  const newDoc = await PDFLib.PDFDocument.create();
+  const copiedPages = await newDoc.copyPages(doc, newOrder);
+  copiedPages.forEach(p => newDoc.addPage(p));
+  
+  showProgress(80);
+  const pdfBytes = await newDoc.save();
+  downloadPdf(pdfBytes, 'reordered.pdf');
+  showProgress(100);
+  showStatus('✅ Pages reordered successfully!', 'success');
+}
+
+async function doPageNumbers() {
+  if (files.length !== 1) throw new Error('Select exactly 1 PDF');
+  
+  const position = document.getElementById('pageNumPos').value;
+  const startNum = parseInt(document.getElementById('pageNumStart').value) || 1;
+  const doc = pdfDocs[files[0].name];
+  const pages = doc.getPages();
+  const font = await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+  
+  showProgress(10);
+  for (let i = 0; i < pages.length; i++) {
+    const page = pages[i];
+    const { width, height } = page.getSize();
+    const num = String(startNum + i);
+    const textWidth = font.widthOfTextAtSize(num, 12);
+    
+    let x, y;
+    switch (position) {
+      case 'bottom-right': x = width - textWidth - 30; y = 20; break;
+      case 'bottom-center': x = (width - textWidth) / 2; y = 20; break;
+      case 'bottom-left': x = 30; y = 20; break;
+      case 'top-right': x = width - textWidth - 30; y = height - 25; break;
+      default: x = width - textWidth - 30; y = 20;
+    }
+    
+    page.drawText(num, { x, y, size: 12, font, color: PDFLib.rgb(0.3, 0.3, 0.3) });
+    showProgress(10 + (80 * (i + 1) / pages.length));
+  }
+  
+  showProgress(95);
+  const pdfBytes = await doc.save();
+  downloadPdf(pdfBytes, 'numbered.pdf');
+  showProgress(100);
+  showStatus(`✅ Added page numbers (${pages.length} pages)`, 'success');
+}
+
+async function doExtract() {
+  if (files.length !== 1) throw new Error('Select exactly 1 PDF');
+  
+  if (pageSelections.size === 0) {
+    await renderPageThumbnails(files[0]);
+    showStatus('Select pages by clicking on them, then click Process again.', 'error');
+    return;
+  }
+  
+  const doc = pdfDocs[files[0].name];
+  const pages = [...pageSelections].sort((a, b) => a - b);
+  
+  showProgress(10);
+  const newDoc = await PDFLib.PDFDocument.create();
+  const copiedPages = await newDoc.copyPages(doc, pages.map(p => p - 1));
+  copiedPages.forEach(p => newDoc.addPage(p));
+  
+  showProgress(80);
+  const pdfBytes = await newDoc.save();
+  downloadPdf(pdfBytes, `extracted_pages.pdf`);
+  showProgress(100);
+  showStatus(`✅ Extracted ${pages.length} page(s)`, 'success');
+}
+
+// Init
+renderOptions();
+</script>
+</body>
+</html>
